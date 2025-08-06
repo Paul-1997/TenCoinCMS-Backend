@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 資料庫
+  postgres:
+    image: postgres:16-alpine
+    container_name: tencoin-postgres
+    environment:
+      POSTGRES_DB: tencoin_cms
+      POSTGRES_USER: tencoin
+      POSTGRES_PASSWORD: tencoin123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - tencoin-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tencoin -d tencoin_cms"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API 服務
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tencoin-api
+    environment:
+      DATABASE_URL: postgresql://tencoin:tencoin123@postgres:5432/tencoin_cms
+      API_KEY: your-secret-api-key-here
+      PORT: 3000
+      HOST: 0.0.0.0
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tencoin-network
+    # 移除 volumes 和 command，使用 Dockerfile 中的 CMD
+
+volumes:
+  postgres_data:
+
+networks:
+  tencoin-network:
+    driver: bridge 
